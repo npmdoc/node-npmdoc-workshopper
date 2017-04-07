@@ -1,17 +1,40 @@
 {
-    "buildNpmdoc":"workshopper",
+    "author": "kai zhu <kaizhu256@gmail.com>",
+    "buildNpmdoc": "workshopper",
+    "description": "api documentation for [workshopper (v2.7.0)](https://github.com/rvagg/workshopper) [![npm package](https://img.shields.io/npm/v/npmdoc-workshopper.svg?style=flat-square)](https://www.npmjs.org/package/npmdoc-workshopper) [![travis-ci.org build-status](https://api.travis-ci.org/npmdoc/node-npmdoc-workshopper.svg)](https://travis-ci.org/npmdoc/node-npmdoc-workshopper)",
     "devDependencies": {
-        "workshopper": "*",
         "electron-lite": "kaizhu256/node-electron-lite#alpha",
-        "utility2": "kaizhu256/node-utility2#alpha"
+        "utility2": "kaizhu256/node-utility2#alpha",
+        "workshopper": "*"
     },
-    "name":"npmdoc-workshopper",
+    "engines": {
+        "node": ">=4.0"
+    },
+    "homepage": "https://github.com/npmdoc/node-npmdoc-workshopper",
+    "keywords": [
+        "documentation",
+        "workshopper"
+    ],
+    "license": "MIT",
+    "main": "lib.npmdoc_workshopper.js",
+    "name": "npmdoc-workshopper",
+    "nameAlias": "npmdoc_workshopper",
+    "nameOriginal": "npmdoc-workshopper",
+    "os": [
+        "darwin",
+        "linux"
+    ],
     "repository": {
         "type": "git",
         "url": "https://github.com/npmdoc/node-npmdoc-workshopper"
     },
     "scripts": {
-        "build-ci": "utility2 shReadmeTest build_ci.sh"
+        "build-ci": "utility2 shReadmeTest build_ci.sh",
+        "env": "env",
+        "heroku-postbuild": "(set -e; npm install \"kaizhu256/node-utility2#alpha\"; utility2 shDeployHeroku)",
+        "postinstall": "if [ -f npm_scripts.sh ]; then ./npm_scripts.sh postinstall; fi",
+        "start": "(set -e; export PORT=${PORT:-8080}; utility2 start test.js)",
+        "test": "(set -e; export PORT=$(utility2 shServerPortRandom); utility2 test test.js)"
     },
     "version": "0.0.1"
 }
