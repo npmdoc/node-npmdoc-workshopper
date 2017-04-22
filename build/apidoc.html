@@ -63,6 +63,15 @@
 
         <li>
 
+            <a class="apidocElementLiA" href="#apidoc.element.workshopper.workshopper">
+            function <span class="apidocSignatureSpan"></span>workshopper
+            <span class="apidocSignatureSpan">(options)</span>
+            </a>
+
+        </li>
+
+        <li>
+
             <a class="apidocElementLiA" href="#apidoc.element.workshopper.super_">
             function <span class="apidocSignatureSpan">workshopper.</span>super_
             <span class="apidocSignatureSpan">()</span>
@@ -223,6 +232,154 @@
 
 <div class="apidocSectionDiv">
 <h1><a href="#apidoc.module.workshopper" id="apidoc.module.workshopper">module workshopper</a></h1>
+
+
+    <h2>
+        <a href="#apidoc.element.workshopper.workshopper" id="apidoc.element.workshopper.workshopper">
+        function <span class="apidocSignatureSpan"></span>workshopper
+        <span class="apidocSignatureSpan">(options)</span>
+        </a>
+    </h2>
+    <ul>
+    <li>description and source-code<pre class="apidocCodePre">function Workshopper(options) {
+  if (!(this instanceof Workshopper))
+    return new Workshopper(options)
+
+  EventEmitter.call(this)
+
+  var handled = false
+    , exercise
+    , mode = argv._[0]
+
+  if (typeof options != &#x27;object&#x27;)
+    throw new TypeError(&#x27;need to provide an options object&#x27;)
+
+  if (typeof options.name != &#x27;string&#x27;)
+    throw new TypeError(&#x27;need to provide a `name` String option&#x27;)
+
+  this.appName       = options.name
+  this.appDir        = util.assertDir(options, &#x27;appDir&#x27;)
+  this.exerciseDir   = util.assertDir(options, &#x27;exerciseDir&#x27;, options.appDir, &#x27;exercises&#x27;)
+  this.globalDataDir = util.userDir(&#x27;.config&#x27;, &#x27;workshopper&#x27;)
+  this.dataDir       = util.userDir(&#x27;.config&#x27;, this.appName)
+
+  util.assertFile(options, &#x27;menuJson&#x27;, options.exerciseDir, &#x27;menu.json&#x27;)
+
+  if (!options.languages) {
+    // In case a workshopper didn&#x27;t define a any language
+    options.languages = [&#x27;en&#x27;]
+  }
+
+  this.defaultLang = options.languages[0]
+  // optional
+  this.menuOptions = options.menu
+  // helpFile is additional to the usage in usage.txt
+  this.helpFile    = options.helpFile
+  // optional
+  this.footerFile  =   options.footerFile === false
+                     ? []
+                     : [options.footerFile, path.join(__dirname, &#x27;./i18n/footer/{lang}.md&#x27;)]
+  this.width       = typeof options.width == &#x27;number&#x27;
+      ? options.width
+      : defaultWidth
+  // an `onComplete` hook function *must* call the callback given to it when it&#x27;s finished, async or not
+  this.onComplete  = typeof options.onComplete == &#x27;function&#x27; &#x26;&#x26; options.onComplete
+  this.exercises   = require(options.menuJson).filter(function (e) {
+    return !/^\/\//.test(e)
+  })
+
+
+  try {
+    this.lang = i18n.chooseLang(
+        this.globalDataDir
+      , this.dataDir
+      , argv.l || argv.lang
+      , this.defaultLang
+      , options.languages
+    )
+  } catch (e) {
+    if (e instanceof TypeError)  // In case the language couldn&#x27;t be selected
+      console.log(e.message)
+    else
+      console.error(e.stack)
+    process.exit(1)
+  }
+
+  this.i18n      = i18n.init(options, this.exercises, this.lang, this.globalDataDir)
+  this.__        = this.i18n.__
+  this.__n       = this.i18n.__n
+  this.languages = this.i18n.languages
+
+  // backwards compatibility for title and subtitle
+  this.__defineGetter__(&#x27;title&#x27;, this.__.bind(this, &#x27;title&#x27;))
+  this.__defineGetter__(&#x27;subtitle&#x27;, this.__.bind(this, &#x27;subtitle&#x27;))
+
+  if (argv.v || argv.version || mode == &#x27;version&#x27;)
+    return console.log(
+        this.appName
+      + &#x27;@&#x27;
+      + require(path.join(this.appDir, &#x27;package.json&#x27;)).version
+    )
+
+  if (argv.h || argv.help || mode == &#x27;help&#x27;)
+    return this._printHelp()
+
+  this.current = this.getData(&#x27;current&#x27;)
+
+  if (options.menuItems &#x26;&#x26; !options.commands)
+    options.commands = options.menuItems
+
+  if (Array.isArray(options.commands)) {
+    options.commands.forEach(function (item) {
+      if (mode == item.name
+          || argv[item.name]
+          || (item.short &#x26;&#x26; argv[item.short])) {
+        handled = true
+        return item.handler(this)
+      }
+    }.bind(this))
+
+    if (handled)
+      return
+
+    this.commands = options.commands
+  }
+
+  if (mode == &#x27;list&#x27;) {
+    return this.exercises.forEach(function (name) {
+      console.log(this.__(&#x27;exercise.&#x27; + name))
+    }.bind(this))
+  }
+
+  if (mode == &#x27;current&#x27;)
+    return console.log(this.__(&#x27;exercise.&#x27; + this.current))
+
+  if (mode == &#x27;select&#x27; || mode == &#x27;print&#x27;) {
+    var selected = argv._.length &#x3e; 1 ? argv._.slice(1).join(&#x27; &#x27;) : this.current
+    if (/[0-9]+/.test(selected)) {
+      selected = this.exercises[parseInt(selected-1, 10)] || selected
+    } else {
+      selected = this.exercises.filter(function (exercise) {
+        return selected === this.__(&#x27;exercise.&#x27; + exercise)
+      }.bind(this))[0] || selected;
+    }
+    onselect.call(this, selected)
+    return
+  }
+
+  if (mode == &#x27;verify&#x27; || mode == &#x27;run&#x27;) {
+    exercise = this.current &#x26;&#x26; this.loadExercise(this.current)
+
+    if (!this.current)
+      return error(this.__(&#x27;error.exercise.none_active&#x27;))
+
+    if (!exercise)
+      return error(this.__(&#x27;error.exercise.missing&#x27;, {name: name}))
+
+    if ...</pre></li>
+    <li>example usage<pre class="apidocCodePre">n/a</pre></li>
+    </ul>
+
 
 
     <h2>
@@ -521,7 +678,24 @@
     <li>description and source-code<pre class="apidocCodePre">function dirFromName(exerciseDir, name) {
   return path.join(exerciseDir, idFromName(name))
 }</pre></li>
-    <li>example usage<pre class="apidocCodePre">n/a</pre></li>
+    <li>example usage<pre class="apidocCodePre">...
+
+if (menu.filter(function (name) { return typeof name != &#x27;string&#x27; }).length)
+return usage(&#x27;[&#x27; + process.argv[2] + &#x27;] doesn\&#x27;t contain an array of Strings&#x27;)
+
+menu.forEach(processExercise)
+
+function processExercise (name) {
+var dir = util.<span class="apidocCodeKeywordSpan">dirFromName</span>(exDir, name)
+  , files = {
+        &#x27;problem.md&#x27;           : &#x27;# Write stuff about &#x27; + name + &#x27; here&#x27;
+      , &#x27;exercise.js&#x27;          : &#x27;const Exercise = require(\&#x27;workshopper-exercise\&#x27;); module.exports =
+new Exercise()&#x27;
+      , &#x27;solution/solution.js&#x27; : &#x27;// solution stuff here&#x27;
+    }
+
+console.log(&#x27;Making&#x27;, name, &#x27;...&#x27;)
+...</pre></li>
     </ul>
 
 

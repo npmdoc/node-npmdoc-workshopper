@@ -56,6 +56,15 @@
 
         <li>
 
+            <a class="apidocElementLiA" href="#apidoc.element.workshopper.workshopper">
+            function <span class="apidocSignatureSpan"></span>workshopper
+            <span class="apidocSignatureSpan">(options)</span>
+            </a>
+
+        </li>
+
+        <li>
+
             <a class="apidocElementLiA" href="#apidoc.element.workshopper.super_">
             function <span class="apidocSignatureSpan">workshopper.</span>super_
             <span class="apidocSignatureSpan">()</span>
@@ -216,6 +225,154 @@
 
 <div class="apidocSectionDiv">
 <h1><a href="#apidoc.module.workshopper" id="apidoc.module.workshopper">module workshopper</a></h1>
+
+
+    <h2>
+        <a href="#apidoc.element.workshopper.workshopper" id="apidoc.element.workshopper.workshopper">
+        function <span class="apidocSignatureSpan"></span>workshopper
+        <span class="apidocSignatureSpan">(options)</span>
+        </a>
+    </h2>
+    <ul>
+    <li>description and source-code<pre class="apidocCodePre">function Workshopper(options) {
+  if (!(this instanceof Workshopper))
+    return new Workshopper(options)
+
+  EventEmitter.call(this)
+
+  var handled = false
+    , exercise
+    , mode = argv._[0]
+
+  if (typeof options != 'object')
+    throw new TypeError('need to provide an options object')
+
+  if (typeof options.name != 'string')
+    throw new TypeError('need to provide a `name` String option')
+
+  this.appName       = options.name
+  this.appDir        = util.assertDir(options, 'appDir')
+  this.exerciseDir   = util.assertDir(options, 'exerciseDir', options.appDir, 'exercises')
+  this.globalDataDir = util.userDir('.config', 'workshopper')
+  this.dataDir       = util.userDir('.config', this.appName)
+
+  util.assertFile(options, 'menuJson', options.exerciseDir, 'menu.json')
+
+  if (!options.languages) {
+    // In case a workshopper didn't define a any language
+    options.languages = ['en']
+  }
+
+  this.defaultLang = options.languages[0]
+  // optional
+  this.menuOptions = options.menu
+  // helpFile is additional to the usage in usage.txt
+  this.helpFile    = options.helpFile
+  // optional
+  this.footerFile  =   options.footerFile === false
+                     ? []
+                     : [options.footerFile, path.join(__dirname, './i18n/footer/{lang}.md')]
+  this.width       = typeof options.width == 'number'
+      ? options.width
+      : defaultWidth
+  // an `onComplete` hook function *must* call the callback given to it when it's finished, async or not
+  this.onComplete  = typeof options.onComplete == 'function' &amp;&amp; options.onComplete
+  this.exercises   = require(options.menuJson).filter(function (e) {
+    return !/^\/\//.test(e)
+  })
+
+
+  try {
+    this.lang = i18n.chooseLang(
+        this.globalDataDir
+      , this.dataDir
+      , argv.l || argv.lang
+      , this.defaultLang
+      , options.languages
+    )
+  } catch (e) {
+    if (e instanceof TypeError)  // In case the language couldn't be selected
+      console.log(e.message)
+    else
+      console.error(e.stack)
+    process.exit(1)
+  }
+
+  this.i18n      = i18n.init(options, this.exercises, this.lang, this.globalDataDir)
+  this.__        = this.i18n.__
+  this.__n       = this.i18n.__n
+  this.languages = this.i18n.languages
+
+  // backwards compatibility for title and subtitle
+  this.__defineGetter__('title', this.__.bind(this, 'title'))
+  this.__defineGetter__('subtitle', this.__.bind(this, 'subtitle'))
+
+  if (argv.v || argv.version || mode == 'version')
+    return console.log(
+        this.appName
+      + '@'
+      + require(path.join(this.appDir, 'package.json')).version
+    )
+
+  if (argv.h || argv.help || mode == 'help')
+    return this._printHelp()
+
+  this.current = this.getData('current')
+
+  if (options.menuItems &amp;&amp; !options.commands)
+    options.commands = options.menuItems
+
+  if (Array.isArray(options.commands)) {
+    options.commands.forEach(function (item) {
+      if (mode == item.name
+          || argv[item.name]
+          || (item.short &amp;&amp; argv[item.short])) {
+        handled = true
+        return item.handler(this)
+      }
+    }.bind(this))
+
+    if (handled)
+      return
+
+    this.commands = options.commands
+  }
+
+  if (mode == 'list') {
+    return this.exercises.forEach(function (name) {
+      console.log(this.__('exercise.' + name))
+    }.bind(this))
+  }
+
+  if (mode == 'current')
+    return console.log(this.__('exercise.' + this.current))
+
+  if (mode == 'select' || mode == 'print') {
+    var selected = argv._.length &gt; 1 ? argv._.slice(1).join(' ') : this.current
+    if (/[0-9]+/.test(selected)) {
+      selected = this.exercises[parseInt(selected-1, 10)] || selected
+    } else {
+      selected = this.exercises.filter(function (exercise) {
+        return selected === this.__('exercise.' + exercise)
+      }.bind(this))[0] || selected;
+    }
+    onselect.call(this, selected)
+    return
+  }
+
+  if (mode == 'verify' || mode == 'run') {
+    exercise = this.current &amp;&amp; this.loadExercise(this.current)
+
+    if (!this.current)
+      return error(this.__('error.exercise.none_active'))
+
+    if (!exercise)
+      return error(this.__('error.exercise.missing', {name: name}))
+
+    if ...</pre></li>
+    <li>example usage<pre class="apidocCodePre">n/a</pre></li>
+    </ul>
+
 
 
     <h2>
@@ -514,7 +671,24 @@
     <li>description and source-code<pre class="apidocCodePre">function dirFromName(exerciseDir, name) {
   return path.join(exerciseDir, idFromName(name))
 }</pre></li>
-    <li>example usage<pre class="apidocCodePre">n/a</pre></li>
+    <li>example usage<pre class="apidocCodePre">...
+
+if (menu.filter(function (name) { return typeof name != 'string' }).length)
+return usage('[' + process.argv[2] + '] doesn\'t contain an array of Strings')
+
+menu.forEach(processExercise)
+
+function processExercise (name) {
+var dir = util.<span class="apidocCodeKeywordSpan">dirFromName</span>(exDir, name)
+  , files = {
+        'problem.md'           : '# Write stuff about ' + name + ' here'
+      , 'exercise.js'          : 'const Exercise = require(\'workshopper-exercise\'); module.exports =
+new Exercise()'
+      , 'solution/solution.js' : '// solution stuff here'
+    }
+
+console.log('Making', name, '...')
+...</pre></li>
     </ul>
 
 
